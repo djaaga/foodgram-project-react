@@ -130,3 +130,10 @@ dmypy.json
 
 # .idea
 .idea
+
+# folders with static and media
+backend_static/
+backend_media/
+
+# migrations
+migrations/
