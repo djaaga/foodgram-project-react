@@ -1,11 +1,11 @@
-FROM python:3.10.4-slim
-
-LABEL author="Bykov Evgeniy" version=1 release_date=25-08-2022
+FROM python:3.8-slim
 
 WORKDIR /app
 
+COPY requirements.txt .
+
+RUN python -m pip install --upgrade pip && pip3 install -r requirements.txt --no-cache-dir
+
 COPY . .
 
-RUN pip3 install -r /app/requirements.txt --no-cache-dir
-
-CMD ["gunicorn", "foodgram.wsgi:application", "--bind", "0:8000" ]
+CMD ["gunicorn", "api_foodgram.wsgi:application", "--bind", "0:8000"]

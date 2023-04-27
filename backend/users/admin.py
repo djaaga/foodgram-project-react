@@ -1,12 +1,37 @@
+from django.conf import settings
 from django.contrib import admin
+from django.contrib.auth.admin import UserAdmin
 
-from .models import User
+from .forms import CustomUserCreationForm
+from .models import CustomUser, Subscribe
 
-admin.site.empty_value_display = '--Пусто--'
+
+class CustomUserAdmin(UserAdmin):
+    model = CustomUser
+    add_form = CustomUserCreationForm
+    list_display = (
+        'username',
+        'email',
+        'first_name',
+        'last_name'
+    )
+    search_fields = (
+        'username',
+        'email',
+        'first_name',
+        'last_name',
+    )
+    list_filter = ('email', 'username',)
+    ordering = ('id',)
+    empty_value_display = settings.EMPTY_VALUE_DISPLAY
 
 
-@admin.register(User)
-class UserAdmin(admin.ModelAdmin):
-    list_display = ('id', 'username', 'email', 'is_superuser')
-    search_fields = ('username', 'email')
-    list_filter = ('username', 'email')
+class SubscribeAdmin(admin.ModelAdmin):
+    list_display = ('user', 'author')
+    search_fields = ('user', 'author')
+    list_filter = ('user', 'author')
+    empty_value_display = settings.EMPTY_VALUE_DISPLAY
+
+
+admin.site.register(CustomUser, CustomUserAdmin)
+admin.site.register(Subscribe, SubscribeAdmin)

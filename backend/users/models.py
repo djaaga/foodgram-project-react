@@ -1,47 +1,74 @@
 from django.contrib.auth.models import AbstractUser
-from django.core.validators import RegexValidator
 from django.db import models
 
 
-class User(AbstractUser):
+class CustomUser(AbstractUser):
     username = models.CharField(
+        'Логин',
         max_length=150,
         unique=True,
-        db_index=True,
-        blank=False,
-        verbose_name='Логин',
-        help_text='Введите логин',
-        validators=[
-            RegexValidator(
-                regex=r'^[\w.@+-]+\Z',
-            ),
-        ]
+        error_messages={
+            'unique': 'Пользователь с таким username уже существует.',
+        }
     )
+    password = models.CharField('Пароль', max_length=150)
     email = models.EmailField(
+        'Почта',
         max_length=254,
         unique=True,
-        db_index=True,
-        verbose_name='Адрес электронной почты',
-        help_text='Введите электронную почту'
+        error_messages={
+            'unique': 'Пользователь с таким e-mail уже существует.',
+        }
     )
-    first_name = models.CharField(
-        max_length=150,
-        verbose_name='Имя',
-        help_text='Введите имя'
-    )
-    last_name = models.CharField(
-        max_length=150,
-        verbose_name='Фамилия',
-        help_text='Введите фамилию'
-    )
+    first_name = models.CharField('Имя', max_length=150)
+    last_name = models.CharField('Фамилия', max_length=150)
 
     USERNAME_FIELD = 'email'
-    REQUIRED_FIELDS = ('username', 'first_name', 'last_name',)
+    REQUIRED_FIELDS = [
+        'username',
+        'password',
+        'first_name',
+        'last_name',
+    ]
 
     class Meta:
-        ordering = ('-id',)
+        ordering = ('id',)
+        constraints = [
+            models.UniqueConstraint(
+                fields=['email', 'username'],
+                name='unique_auth'
+            ),
+        ]
         verbose_name = 'Пользователь'
         verbose_name_plural = 'Пользователи'
 
     def __str__(self):
         return self.username
+
+
+class Subscribe(models.Model):
+    user = models.ForeignKey(
+        CustomUser,
+        on_delete=models.CASCADE,
+        related_name='follower',
+        verbose_name='Подписчик'
+    )
+    author = models.ForeignKey(
+        CustomUser,
+        on_delete=models.CASCADE,
+        related_name='following',
+        verbose_name='Автор'
+    )
+
+    class Meta:
+        verbose_name = 'Подписка'
+        verbose_name_plural = 'Подписки'
+        constraints = [
+            models.UniqueConstraint(
+                fields=['user', 'author'],
+                name='unique_follow'
+            )
+        ]
+
+    def __str__(self):
+        return f'{self.user} подписан на {self.author}'

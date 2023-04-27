@@ -1,2 +1,3 @@
-# praktikum_new_diplom
-# Проект Foodgram
+# **Foodgram project**
+
+### _Продуктовый помощник_
