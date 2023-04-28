@@ -1,4 +1,5 @@
 from django_filters.rest_framework import DjangoFilterBackend
+from django.db.models import Exists, OuterRef
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
 from rest_framework.permissions import AllowAny
@@ -32,16 +33,28 @@ class RecipeViewSet(viewsets.ModelViewSet):
     filter_backends = (DjangoFilterBackend,)
     filterset_class = RecipeFilter
     pagination_class = CustomPageNumberPagination
+    permission_classes = [IsAuthorOrReadOnly]
 
     def get_queryset(self):
-        is_favorited = self.request.query_params.get('is_favorited')
-        if is_favorited is not None and int(is_favorited) == 1:
-            return Recipe.objects.filter(favorites__user=self.request.user)
+        queryset = super().get_queryset()
+
+        is_favorited = self.request.query_params.get('is_favorited', 0)
         is_in_shopping_cart = self.request.query_params.get(
-            'is_in_shopping_cart')
+            'is_in_shopping_cart'
+        )
+
+        if is_favorited is not None and int(is_favorited) == 1:
+            subquery = Favorite.objects.filter(
+                recipe=OuterRef('pk'), user=self.request.user
+            )
+            queryset = queryset.annotate(is_favorited=Exists(subquery))
         if is_in_shopping_cart is not None and int(is_in_shopping_cart) == 1:
-            return Recipe.objects.filter(cart__user=self.request.user)
-        return Recipe.objects.all()
+            subquery = Shopping.objects.filter(
+                recipe=OuterRef('pk'), user=self.request.user
+            )
+            queryset = queryset.annotate(is_in_shopping_cart=Exists(subquery))
+
+        return queryset
 
     def destroy(self, request, *args, **kwargs):
         instance = self.get_object()
@@ -56,11 +69,6 @@ class RecipeViewSet(viewsets.ModelViewSet):
         if self.request.method == 'GET':
             return RecipeGetSerializer
         return RecipeSerializer
-
-    def get_permissions(self):
-        if self.action != 'create':
-            return(IsAuthorOrReadOnly(),)
-        return super().get_permissions()
 
     @action(detail=True, methods=['POST', 'DELETE'],)
     def favorite(self, request, pk):

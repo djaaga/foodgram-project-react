@@ -25,14 +25,15 @@ class IngredientSerializer(serializers.ModelSerializer):
 
 class IngredientRecipeGetSerializer(serializers.ModelSerializer):
     id = serializers.ReadOnlyField(source='ingredient.id')
-    name = serializers.ReadOnlyField(source='ingredient.name')
+    amount = serializers.ReadOnlyField(source='amount')
+    ingredient = IngredientSerializer(read_only=True)
     measurement_unit = serializers.ReadOnlyField(
         source='ingredient.measurement_unit'
     )
 
     class Meta:
         model = RecipeIngredient
-        fields = ('id', 'name', 'measurement_unit', 'amount')
+        fields = ('id', 'ingredient', 'measurement_unit', 'amount')
         validators = [
             UniqueTogetherValidator(
                 queryset=RecipeIngredient.objects.all(),
@@ -52,6 +53,7 @@ class IngredientRecipeSerializer(serializers.ModelSerializer):
     class Meta:
         model = RecipeIngredient
         fields = ('id', 'amount', 'recipe')
+        read_only_fields = ('recipe',)
 
 
 class RecipeFollowSerializer(serializers.ModelSerializer):
@@ -97,8 +99,8 @@ class RecipeGetSerializer(serializers.ModelSerializer):
     ingredients = serializers.SerializerMethodField()
     author = UserSerializer(read_only=True)
     tags = TagSerializer(many=True, read_only=True)
-    is_favorited = serializers.SerializerMethodField()
-    is_in_shopping_cart = serializers.SerializerMethodField()
+    is_favorited = serializers.BooleanField(read_only=True)
+    is_in_shopping_cart = serializers.BooleanField(read_only=True)
 
     class Meta:
         model = Recipe
@@ -121,8 +123,10 @@ class RecipeGetSerializer(serializers.ModelSerializer):
 
     def get_ingredients(self, obj):
         recipe_ingredients = RecipeIngredient.objects.filter(recipe=obj)
-        return IngredientRecipeGetSerializer(recipe_ingredients,
-                                             many=True).data
+        serializer = IngredientRecipeGetSerializer(
+            recipe_ingredients, many=True
+        )
+        return serializer.data
 
 
 class RecipeSerializer(serializers.ModelSerializer):
@@ -142,6 +146,8 @@ class RecipeSerializer(serializers.ModelSerializer):
         read_only_fields = ('id', 'author', 'tags')
 
     def validate(self, data):
+        super().validate(data)
+
         ingredients = self.initial_data.get('ingredients')
         ingredients_list = [ingredient['id'] for ingredient in ingredients]
         if len(ingredients_list) != len(set(ingredients_list)):
@@ -159,16 +165,19 @@ class RecipeSerializer(serializers.ModelSerializer):
         return recipe
 
     def update(self, instance, validated_data):
-        if 'tags' in self.validated_data:
-            tags_data = validated_data.pop('tags')
+        tags_data = validated_data.get('tags')
+        if tags_data:
             instance.tags.set(tags_data)
-        if 'ingredients' in self.validated_data:
-            ingredients_data = validated_data.pop('ingredients')
+
+        ingredients_data = validated_data.get('ingredients')
+        if ingredients_data:
             amount_set = RecipeIngredient.objects.filter(
                 recipe__id=instance.id)
             amount_set.delete()
-            recipe_ingredient_create(ingredients_data, RecipeIngredient,
-                                     instance)
+            recipe_ingredient_create(
+                ingredients_data, RecipeIngredient, instance
+            )
+
         return super().update(instance, validated_data)
 
     def to_representation(self, instance):
