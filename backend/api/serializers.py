@@ -96,7 +96,7 @@ class FollowSerializer(serializers.ModelSerializer):
 
 class RecipeGetSerializer(serializers.ModelSerializer):
     image = Base64ImageField(max_length=None, use_url=True)
-    ingredients = serializers.SerializerMethodField()
+    ingredients = IngredientRecipeSerializer(many=True)
     author = UserSerializer(read_only=True)
     tags = TagSerializer(many=True, read_only=True)
     is_favorited = serializers.BooleanField(read_only=True)
@@ -108,6 +108,23 @@ class RecipeGetSerializer(serializers.ModelSerializer):
                   'cooking_time', 'is_favorited', 'is_in_shopping_cart',
                   'image')
         read_only_fields = ('id', 'author',)
+
+
+class RecipeSerializer(serializers.ModelSerializer):
+    ingredients = IngredientRecipeSerializer(many=True)
+    author = UserSerializer(read_only=True)
+    tags = serializers.PrimaryKeyRelatedField(
+        queryset=Tag.objects.all(),
+        many=True,
+    )
+    image = Base64ImageField(max_length=None, use_url=True)
+    cooking_time = serializers.IntegerField(min_value=1)
+
+    class Meta:
+        model = Recipe
+        fields = ('id', 'author', 'name', 'text', 'ingredients', 'tags',
+                  'cooking_time', 'image')
+        read_only_fields = ('id', 'author', 'tags')
 
     def get_is_favorited(self, obj):
         user = self.context['request'].user
@@ -128,25 +145,7 @@ class RecipeGetSerializer(serializers.ModelSerializer):
         )
         return serializer.data
 
-
-class RecipeSerializer(serializers.ModelSerializer):
-    ingredients = IngredientRecipeSerializer(many=True)
-    author = UserSerializer(read_only=True)
-    tags = serializers.PrimaryKeyRelatedField(
-        queryset=Tag.objects.all(),
-        many=True,
-    )
-    image = Base64ImageField(max_length=None, use_url=True)
-    cooking_time = serializers.IntegerField(min_value=1)
-
-    class Meta:
-        model = Recipe
-        fields = ('id', 'author', 'name', 'text', 'ingredients', 'tags',
-                  'cooking_time', 'image')
-        read_only_fields = ('id', 'author', 'tags')
-
     def validate(self, data):
-        super().validate(data)
 
         ingredients = self.initial_data.get('ingredients')
         ingredients_list = [ingredient['id'] for ingredient in ingredients]
@@ -154,7 +153,7 @@ class RecipeSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError(
                 'Проверьте, какой-то ингредиент был выбран более 1 раза'
             )
-        return data
+        return super().validate(data)
 
     def create(self, validated_data):
         ingredients_data = validated_data.pop('ingredients')

@@ -37,8 +37,13 @@ class RecipeViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         queryset = super().get_queryset()
+        queryset = queryset.exclude(shopping__user=self.request.user)
 
         is_favorited = self.request.query_params.get('is_favorited', 0)
+        """Переменная is_in_shopping_cart используется в get_queryset()методе
+        для фильтрации набора запросов на основе того,
+        находится ли рецепт в корзине покупок
+        аутентифицированного пользователя."""
         is_in_shopping_cart = self.request.query_params.get(
             'is_in_shopping_cart'
         )
@@ -52,7 +57,10 @@ class RecipeViewSet(viewsets.ModelViewSet):
             subquery = Shopping.objects.filter(
                 recipe=OuterRef('pk'), user=self.request.user
             )
-            queryset = queryset.annotate(is_in_shopping_cart=Exists(subquery))
+            queryset = queryset.filter(
+                shopping__user=self.request.user).annotate(
+                is_in_shopping_cart=Exists(subquery)
+            )
 
         return queryset
 
