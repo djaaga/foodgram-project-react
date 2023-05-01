@@ -1,5 +1,4 @@
 from django_filters.rest_framework import DjangoFilterBackend
-from django.db.models import Exists, OuterRef
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
 from rest_framework.permissions import AllowAny
@@ -38,30 +37,6 @@ class RecipeViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         queryset = super().get_queryset()
         queryset = queryset.exclude(shopping__user=self.request.user)
-
-        is_favorited = self.request.query_params.get('is_favorited', 0)
-        """Переменная is_in_shopping_cart используется в get_queryset()методе
-        для фильтрации набора запросов на основе того,
-        находится ли рецепт в корзине покупок
-        аутентифицированного пользователя."""
-        is_in_shopping_cart = self.request.query_params.get(
-            'is_in_shopping_cart'
-        )
-
-        if is_favorited is not None and int(is_favorited) == 1:
-            subquery = Favorite.objects.filter(
-                recipe=OuterRef('pk'), user=self.request.user
-            )
-            queryset = queryset.annotate(is_favorited=Exists(subquery))
-        if is_in_shopping_cart is not None and int(is_in_shopping_cart) == 1:
-            subquery = Shopping.objects.filter(
-                recipe=OuterRef('pk'), user=self.request.user
-            )
-            queryset = queryset.filter(
-                shopping__user=self.request.user).annotate(
-                is_in_shopping_cart=Exists(subquery)
-            )
-
         return queryset
 
     def destroy(self, request, *args, **kwargs):

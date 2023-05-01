@@ -1,6 +1,8 @@
 import django_filters
 from django.contrib.auth import get_user_model
+from django.db.models import Exists, OuterRef
 
+from recipes.models import Favorite, Ingredient, Recipe, Shopping, Tag
 from recipes.models import Ingredient, Recipe, Tag
 
 User = get_user_model()
@@ -24,7 +26,29 @@ class RecipeFilter(django_filters.FilterSet):
         queryset=Tag.objects.all(),
     )
     author = django_filters.ModelChoiceFilter(queryset=User.objects.all())
+    is_favorited = django_filters.BooleanFilter(method='filter_is_favorited')
+    is_in_shopping_cart = django_filters.BooleanFilter(
+        method='filter_is_in_shopping_cart')
 
     class Meta:
         model = Recipe
         fields = ('tags', 'author')
+
+    def filter_is_favorited(self, queryset, name, value):
+        if value:
+            subquery = Favorite.objects.filter(
+                recipe=OuterRef('pk'), user=self.request.user
+            )
+            queryset = queryset.annotate(is_favorited=Exists(subquery))
+        return queryset
+
+    def filter_is_in_shopping_cart(self, queryset, name, value):
+        subquery = Shopping.objects.filter(
+            recipe=OuterRef('pk'), user=self.request.user
+        )
+        queryset = queryset.annotate(
+            is_in_shopping_cart=Exists(subquery)
+        )
+        if value:
+            queryset = queryset.filter(shopping__user=self.request.user)
+        return queryset
