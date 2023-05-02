@@ -1,12 +1,13 @@
 from django.contrib.auth import get_user_model
+
 from drf_extra_fields.fields import Base64ImageField
+from recipes.models import Ingredient, Recipe, RecipeIngredient, Tag
 from rest_framework import serializers
 from rest_framework.validators import UniqueTogetherValidator
-
-from recipes.models import Ingredient, Recipe, RecipeIngredient, Tag
-from .utils import recipe_ingredient_create
 from users.models import Subscribe
 from users.serializers import UserSerializer
+
+from .utils import recipe_ingredient_create
 
 User = get_user_model()
 
