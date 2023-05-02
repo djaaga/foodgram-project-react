@@ -38,8 +38,9 @@ class RecipeFilter(django_filters.FilterSet):
             subquery = Favorite.objects.filter(
                 recipe=OuterRef('pk'), user=self.request.user
             )
-            queryset = queryset.annotate(is_favorited=Exists(subquery))
-        return queryset
+            return queryset.annotate(is_favorited=Exists(subquery))
+        else:
+            return queryset
 
     def filter_is_in_shopping_cart(self, queryset, name, value):
         subquery = Shopping.objects.filter(
@@ -49,5 +50,6 @@ class RecipeFilter(django_filters.FilterSet):
             is_in_shopping_cart=Exists(subquery)
         )
         if value:
-            queryset = queryset.filter(shopping__user=self.request.user)
-        return queryset
+            return queryset.filter(shopping__user=self.request.user)
+        else:
+            return queryset

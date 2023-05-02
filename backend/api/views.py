@@ -35,9 +35,8 @@ class RecipeViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthorOrReadOnly]
 
     def get_queryset(self):
-        queryset = super().get_queryset()
-        queryset = queryset.exclude(shopping__user=self.request.user)
-        return queryset
+        return super().get_queryset().exclude(
+            shopping__user=self.request.user)
 
     def destroy(self, request, *args, **kwargs):
         instance = self.get_object()
