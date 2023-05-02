@@ -12,7 +12,7 @@ services:
       - "5432:5432"
 
   backend:
-    image: dmomento/foodgram:v.1.0
+    image: dmomento/foodgram:v1
     restart: always
     volumes:
       - static_value:/app/backend_static/
