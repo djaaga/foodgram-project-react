@@ -90,10 +90,4 @@ jobs:
             sudo echo SECRET_KEY=${{ secrets.SECRET_KEY }} >> .env
             sudo echo ALLOWED_HOSTS=${{ secrets.ALLOWED_HOSTS }} >> .env
             sudo echo MODE=${{ secrets.MODE }} >> .env
-
-            cd infra/
-            sudo docker pull dmomento/foodgram_backend:latest
-            sudo docker pull dmomento/foodgram_frontend:latest
-            sudo docker-compose stop
-            sudo docker-compose rm backend
-            sudo docker-compose up -d --build
+            sudo docker-compose up -d
