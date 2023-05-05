@@ -1,37 +1,40 @@
-from django.conf import settings
 from django.contrib import admin
-from django.contrib.auth.admin import UserAdmin
 
-from .forms import CustomUserCreationForm
-from .models import CustomUser, Subscribe
+from .models import Follow, User
 
 
-class CustomUserAdmin(UserAdmin):
-    model = CustomUser
-    add_form = CustomUserCreationForm
+@admin.register(User)
+class UserAdmin(admin.ModelAdmin):
+    """Админка Пользователей."""
+
     list_display = (
-        'username',
-        'email',
-        'first_name',
-        'last_name'
-    )
-    search_fields = (
+        'id',
         'username',
         'email',
         'first_name',
         'last_name',
+        'count_followers',
+        'count_recipes',
     )
-    list_filter = ('email', 'username',)
-    ordering = ('id',)
-    empty_value_display = settings.EMPTY_VALUE_DISPLAY
+    readonly_fields = ('count_followers', 'count_recipes')
+    list_filter = ('username', 'email',)
+    search_fields = ('username', 'email')
+
+    @admin.display(description='Количество подписчиков')
+    def count_followers(self, obj):
+        """Получаем количество подписчиков."""
+        return obj.follower.count()
+
+    @admin.display(description='Количество рецептов')
+    def count_recipes(self, obj):
+        """Получаем количество подписчиков."""
+        return obj.recipes.count()
 
 
-class SubscribeAdmin(admin.ModelAdmin):
+@admin.register(Follow)
+class FollowAdmin(admin.ModelAdmin):
+    """Админка подписчика."""
+
     list_display = ('user', 'author')
-    search_fields = ('user', 'author')
     list_filter = ('user', 'author')
-    empty_value_display = settings.EMPTY_VALUE_DISPLAY
-
-
-admin.site.register(CustomUser, CustomUserAdmin)
-admin.site.register(Subscribe, SubscribeAdmin)
+    search_fields = ('user', 'author')

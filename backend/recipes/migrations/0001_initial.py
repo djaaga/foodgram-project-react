@@ -1,7 +1,9 @@
+
+import colorfield.fields
 import django.core.validators
-import django.db.models.deletion
-from django.conf import settings
 from django.db import migrations, models
+import django.db.models.deletion
+import re
 
 
 class Migration(migrations.Migration):
@@ -9,114 +11,92 @@ class Migration(migrations.Migration):
     initial = True
 
     dependencies = [
-        migrations.swappable_dependency(settings.AUTH_USER_MODEL),
     ]
 
     operations = [
         migrations.CreateModel(
+            name='Favorite',
+            fields=[
+                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
+            ],
+            options={
+                'verbose_name': 'Избранный рецепт',
+                'verbose_name_plural': 'Избранные рецепты',
+                'abstract': False,
+                'default_related_name': 'favorites',
+            },
+        ),
+        migrations.CreateModel(
             name='Ingredient',
             fields=[
-                ('id', models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('name', models.CharField(max_length=200, verbose_name='Название')),
-                ('measurement_unit', models.CharField(max_length=200, verbose_name='Единица измерения')),
+                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
+                ('name', models.CharField(help_text='Количество символов не более 200.', max_length=200, unique=True, verbose_name='Название')),
+                ('measurement_unit', models.CharField(help_text='Количество символов не более 200.', max_length=200, verbose_name='Единица измерения')),
             ],
             options={
                 'verbose_name': 'Ингредиент',
                 'verbose_name_plural': 'Ингредиенты',
+                'ordering': ('name',),
+                'abstract': False,
+            },
+        ),
+        migrations.CreateModel(
+            name='IngredientInRecipe',
+            fields=[
+                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
+                ('amount', models.PositiveSmallIntegerField(default=1, validators=[django.core.validators.MinValueValidator(1, message='Количество ингредиентов не может быть меньше {min_value}!')], verbose_name='Количество')),
+            ],
+            options={
+                'verbose_name': 'Количество ингредиента',
+                'verbose_name_plural': 'Количество ингредиентов',
+                'ordering': ('-id',),
             },
         ),
         migrations.CreateModel(
             name='Recipe',
             fields=[
-                ('id', models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('name', models.CharField(max_length=200, verbose_name='Название')),
-                ('image', models.ImageField(upload_to='recipe_img/', verbose_name='Изображение')),
-                ('text', models.TextField(verbose_name='Описание')),
-                ('cooking_time', models.PositiveSmallIntegerField(validators=[django.core.validators.MinValueValidator(1, message='Минимальное время приготовления 1 минута')], verbose_name='Время приготовления, мин')),
-                ('author', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='recipes', to=settings.AUTH_USER_MODEL, verbose_name='Автор')),
+                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
+                ('name', models.CharField(help_text='Количество символов не более 200.', max_length=200, unique=True, verbose_name='Название')),
+                ('text', models.TextField(verbose_name='Описание рецепта')),
+                ('image', models.ImageField(upload_to='recipes/', verbose_name='Изображение блюда')),
+                ('cooking_time', models.PositiveSmallIntegerField(default=1, validators=[django.core.validators.MinValueValidator(1, message='Время приготовления не может быть меньше одной минуты!')], verbose_name='Время приготовления в минутах')),
+                ('pub_date', models.DateTimeField(auto_now_add=True, verbose_name='Дата публикации')),
             ],
             options={
                 'verbose_name': 'Рецепт',
                 'verbose_name_plural': 'Рецепты',
-                'ordering': ['-id'],
+                'ordering': ('-pub_date',),
+                'abstract': False,
+                'default_related_name': 'recipes',
             },
         ),
         migrations.CreateModel(
             name='Tag',
             fields=[
-                ('id', models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('name', models.CharField(max_length=200, unique=True, verbose_name='Название')),
-                ('color', models.CharField(default='#FF0000', max_length=7, unique=True, verbose_name='HEX-код')),
-                ('slug', models.SlugField(max_length=200, unique=True, verbose_name='Slug тега')),
+                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
+                ('name', models.CharField(help_text='Количество символов не более 200.', max_length=200, unique=True, verbose_name='Название')),
+                ('color', colorfield.fields.ColorField(default='#FF0000', error_messages={'unique': 'Такой цвет уже существует!'}, help_text='Для выбора цвета воспользуйтесь цветовой панелью.', image_field=None, max_length=7, samples=None, unique=True, validators=[django.core.validators.RegexValidator(message='Введенное значение не является цветом в формате HEX', regex='^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$')], verbose_name='Цветовой HEX-код')),
+                ('slug', models.SlugField(help_text='Укажите адрес для страницы тэга. Используйте только латиницу, цифры, дефисы и знаки подчёркивания', max_length=200, unique=True, validators=[django.core.validators.RegexValidator(re.compile('^[-a-zA-Z0-9_]+\\Z'), 'Enter a valid “slug” consisting of letters, numbers, underscores or hyphens.', 'invalid')], verbose_name='Уникальный слаг')),
             ],
             options={
                 'verbose_name': 'Тег',
                 'verbose_name_plural': 'Теги',
+                'ordering': ('name',),
+                'abstract': False,
+                'default_related_name': 'tags',
             },
         ),
         migrations.CreateModel(
-            name='Shopping',
+            name='ShoppingCart',
             fields=[
-                ('id', models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('recipe', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='cart', to='recipes.Recipe', verbose_name='Список покупок')),
-                ('user', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='cart', to=settings.AUTH_USER_MODEL, verbose_name='Автор списка покупок')),
+                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
+                ('recipe', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='recipes.recipe', verbose_name='Рецепт')),
             ],
             options={
-                'verbose_name': 'Список покупок',
-                'verbose_name_plural': 'Списки покупок',
+                'verbose_name': 'покупка',
+                'verbose_name_plural': 'покупки',
+                'abstract': False,
+                'default_related_name': 'shopping_list',
             },
-        ),
-        migrations.CreateModel(
-            name='RecipeIngredient',
-            fields=[
-                ('id', models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('amount', models.PositiveSmallIntegerField(validators=[django.core.validators.MinValueValidator(1, message='Минимальное количество ингредиентов 1')], verbose_name='Количество')),
-                ('ingredient', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='amount', to='recipes.Ingredient', verbose_name='Ингредиент')),
-                ('recipe', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='amount', to='recipes.Recipe', verbose_name='Рецепт')),
-            ],
-            options={
-                'verbose_name': 'Количество ингредиента',
-                'verbose_name_plural': 'Количество ингредиентов',
-                'db_table': 'recipes_recipe_ingredient',
-                'ordering': ['-id'],
-            },
-        ),
-        migrations.AddField(
-            model_name='recipe',
-            name='ingredients',
-            field=models.ManyToManyField(through='recipes.RecipeIngredient', to='recipes.Ingredient', verbose_name='Ингредиенты'),
-        ),
-        migrations.AddField(
-            model_name='recipe',
-            name='tags',
-            field=models.ManyToManyField(to='recipes.Tag', verbose_name='Теги'),
-        ),
-        migrations.CreateModel(
-            name='Favorite',
-            fields=[
-                ('id', models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('recipe', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='favorites', to='recipes.Recipe', verbose_name='Рецепт из списка избранного')),
-                ('user', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='favorites', to=settings.AUTH_USER_MODEL, verbose_name='Автор списка избранного')),
-            ],
-            options={
-                'verbose_name': 'Избранное',
-                'verbose_name_plural': 'Избранные',
-            },
-        ),
-        migrations.AddConstraint(
-            model_name='shopping',
-            constraint=models.UniqueConstraint(fields=('user', 'recipe'), name='unique_cart_user_recipes'),
-        ),
-        migrations.AddConstraint(
-            model_name='recipeingredient',
-            constraint=models.UniqueConstraint(fields=('recipe', 'ingredient'), name='unique_recipe_ingredient'),
-        ),
-        migrations.AddConstraint(
-            model_name='recipe',
-            constraint=models.UniqueConstraint(fields=('author', 'name'), name='unique_author_name'),
-        ),
-        migrations.AddConstraint(
-            model_name='favorite',
-            constraint=models.UniqueConstraint(fields=('user', 'recipe'), name='unique_favorite_recipes'),
         ),
     ]

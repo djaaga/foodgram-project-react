@@ -109,6 +109,9 @@ venv/
 ENV/
 env.bak/
 venv.bak/
+db.sqlite3
+static/
+media/
 
 # Spyder project settings
 .spyderproject
@@ -130,6 +133,3 @@ dmypy.json
 
 # .idea
 .idea
-
-#Media
-media/

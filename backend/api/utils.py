@@ -1,97 +1,62 @@
-import io
+from pathlib import Path
+from datetime import datetime as dt
 
-from django.db.models import Sum
-from django.http import FileResponse
-from django.shortcuts import get_object_or_404
+from django.db.models.signals import post_delete
+from django.dispatch import receiver
+from django.shortcuts import HttpResponse
+from rest_framework import response, status
+from rest_framework.generics import get_object_or_404
 
-from recipes.models import Recipe, RecipeIngredient
-from reportlab.pdfbase import pdfmetrics
-from reportlab.pdfbase.ttfonts import TTFont
-from reportlab.pdfgen import canvas
-from rest_framework import status
-from rest_framework.response import Response
-from rest_framework.views import APIView
+from recipes.models import Recipe
 
 
-class ShoppingCardView(APIView):
-    def get(self, request):
-        user = request.user
-        shopping_list = RecipeIngredient.objects.filter(
-            recipe__cart__user=user).values(
-            'ingredient__name',
-            'ingredient__measurement_unit'
-        ).annotate(
-            amount=Sum('amount')
-        ).order_by()
-        font = 'Tantular'
-        pdfmetrics.registerFont(
-            TTFont('Tantular', 'Tantular.ttf', 'UTF-8')
-        )
-        buffer = io.BytesIO()
-        pdf_file = canvas.Canvas(buffer)
-        pdf_file.setFont(font, 24)
-        pdf_file.drawString(
-            150,
-            800,
-            'Список покупок:'
-        )
-        pdf_file.setFont(font, 14)
-        from_bottom = 750
-        for number, ingredient in enumerate(shopping_list, start=1):
-            pdf_file.drawString(
-                50,
-                from_bottom,
-                (f'{number}.  {ingredient["ingredient__name"]} - '
-                 f'{ingredient["amount"]} '
-                 f'{ingredient["ingredient__measurement_unit"]}')
-            )
-            from_bottom -= 20
-            if from_bottom <= 50:
-                from_bottom = 800
-                pdf_file.showPage()
-                pdf_file.setFont(font, 14)
-        pdf_file.showPage()
-        pdf_file.save()
-        buffer.seek(0)
-        return FileResponse(
-            buffer, as_attachment=True, filename='shopping_list.pdf'
-        )
+def add_and_del(add_serializer, model, request, recipe_id):
+    """Опция добавления и удаления рецепта."""
+    user = request.user
+    data = {'user': user.id,
+            'recipe': recipe_id}
+    serializer = add_serializer(data=data, context={'request': request})
+    if request.method == 'POST':
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return response.Response(serializer.data,
+                                 status=status.HTTP_201_CREATED)
+    get_object_or_404(
+        model, user=user, recipe=get_object_or_404(Recipe, id=recipe_id)
+    ).delete()
+    return response.Response(status=status.HTTP_204_NO_CONTENT)
 
 
-def post(request, recipe_id, model, serializer_class):
-    recipe = get_object_or_404(Recipe, pk=recipe_id)
-    if model.objects.filter(user=request.user, recipe=recipe).exists():
-        return Response(
-            {'errors': 'Рецепт уже есть в избранном/списке покупок'},
-            status=status.HTTP_400_BAD_REQUEST,
-        )
-    model.objects.get_or_create(user=request.user, recipe=recipe)
-    serialized_recipe = serializer_class(recipe).data
-    return Response(serialized_recipe, status=status.HTTP_201_CREATED)
+@receiver(post_delete, sender=Recipe)
+def delete_image(sender, instance, *a, **kw):
+    """Удаляет картинку при удаление рецепта."""
+    image = Path(instance.image.path)
+    if image.exists():
+        image.unlink()
 
 
-def delete(request, pk, model):
-    recipe = get_object_or_404(Recipe, pk=pk)
-    try:
-        follow = model.objects.get(user=request.user, recipe=recipe)
-        follow.delete()
-        return Response(
-            'Рецепт успешно удален из избранного/списка покупок',
-            status=status.HTTP_204_NO_CONTENT
-        )
-    except model.DoesNotExist:
-        return Response(
-            {'errors': 'Данного рецепта не было в избранном/списке покупок'},
-            status=status.HTTP_400_BAD_REQUEST
-        )
+def out_list_ingredients(self, request, ingredients):
+    """Загружает файл *.txt со списком покупок.
+        Доступно только авторизованным пользователям.
+        """
+    user = self.request.user
+    filename = f'{user.username}_shopping_list.txt'
 
-
-def recipe_ingredient_create(ingredients_data, models, recipe):
-    bulk_create_data = (
-        models(
-            recipe=recipe,
-            ingredient=ingredient_data['ingredient'],
-            amount=ingredient_data['amount'])
-        for ingredient_data in ingredients_data
+    today = dt.today()
+    shopping_list = (
+        f'Список покупок для пользователя: {user.username}\n\n'
+        f'Дата: {today:%Y-%m-%d}\n\n'
     )
-    models.objects.bulk_create(bulk_create_data)
+    shopping_list += '\n'.join([
+        f'- {ingredient["ingredient__name"]} '
+        f'({ingredient["ingredient__measurement_unit"]})'
+        f' - {ingredient["amount"]}'
+        for ingredient in ingredients
+    ])
+    shopping_list += f'\n\nFoodgram ({today:%Y})'
+
+    response = HttpResponse(
+        shopping_list, content_type='text.txt; charset=utf-8'
+    )
+    response['Content-Disposition'] = f'attachment; filename={filename}'
+    return response
