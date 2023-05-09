@@ -115,16 +115,24 @@ ssh admin@51.250.104.97
 Выполните по очереди команды:
 
 ```bash
+ в некоторых случаях возможно понадоибться сначала остановить демона nginx 
+ используйте команду sudo systemctl stop nginx
+ после можно собрать образ sudo docker-compose build и запустить контейнеры sudo docker-copmpose up
+ 
 sudo docker-compose exec backend python manage.py migrate
 sudo docker-compose exec backend python manage.py createsuperuser
 sudo docker-compose exec backend python manage.py collectstatic --no-input
-sudo docker-compose exec backend python manage.py importcsv
+sudo docker-compose exec backend python manage.py importjson
 ```
 
 Теперь проект доступен по адресу http://51.250.104.97/. 
-Вход через админ панель:
-login - ya@mail.ru
-pass - admin
+# Админ-панель
+
+Данные для доступа в админ-панель:
+
+email: ya@mail.com
+
+password: admin
 
 #
 
