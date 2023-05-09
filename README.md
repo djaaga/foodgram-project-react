@@ -8,7 +8,6 @@
 [![Yandex.Cloud](https://img.shields.io/badge/-Yandex.Cloud-464646?style=flat-square&logo=Yandex.Cloud)](https://cloud.yandex.ru/)
 [![DjangoREST](https://img.shields.io/badge/DJANGO-REST-ff1709?style=for-the-badge&logo=django&logoColor=white&color=ff1709&labelColor=gray)](https://www.django-rest-framework.org/)
 [![Postgres](https://img.shields.io/badge/postgres-%23316192.svg?style=for-the-badge&logo=postgresql&logoColor=white)](https://www.postgresql.org/)
-[![codecov](https://codecov.io/gh/djaaga/foodgram-project-react/branch/master/graph/badge.svg?token=FKKAKXU90C)](https://codecov.io/gh/EvgVol/foodgram-project-react)
 
 Дипломная работа по специальности Python-разработчик курса Яндекс.Практикум. Данная работа является заключительным этапом обучения. *
 В данной работе разработан бэкенд проекта согласно спецификации API. В репозитории есть папки frontend, backend, infra, tests:
@@ -123,12 +122,15 @@ sudo docker-compose exec backend python manage.py importcsv
 ```
 
 Теперь проект доступен по адресу http://51.250.104.97/. 
+Вход через админ панель:
+login - ya@mail.ru
+pass - admin
 
 #
 
 ## Документация к API   
 Чтобы открыть документацию локально, запустите сервер и перейдите по ссылке:
-[http://localhost/api/docs/](http://localhost/api/docs/) или воспользуйтесь докой на моей сервере: [REDOC](http://130.193.41.225/api/docs/)
+[http://localhost/api/docs/](http://localhost/api/docs/)
 
 #  
 
